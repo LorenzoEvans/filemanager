@@ -7,8 +7,8 @@ use commands::move_file::mv_file;
 use commands::properties::file_prop;
 use commands::rename_file::rn_file;
 use commands::create_directory::create_dir;
+use commands::create_file::create_file;
 use std::{
-    fs::{self},
     io,
     path::PathBuf,
 };
@@ -19,6 +19,7 @@ struct Cli {
     #[clap(subcommand)]
     command: Command,
 }
+
 #[derive(Subcommand, Debug)]
 enum Command {
     #[clap(about = "Rename a file")]
@@ -33,9 +34,9 @@ enum Command {
         #[clap(value_parser)]
         file_name: PathBuf,
         #[clap(short, long, value_parser)]
-        directory: Option<String>,
+        directory: Option<PathBuf>,
     },
-    #[clap(about = "Delete a file")]
+    #[clap(about = "Delete a file or directory")]
     Delete {
         #[clap(value_parser)]
         file_path: PathBuf,
@@ -73,121 +74,68 @@ enum Command {
     #[clap(about = "Rename a directory")]
     RenameDirectory {
         #[clap(value_parser)]
-        old_dir: String,
+        old_dir: PathBuf,
         #[clap(value_parser)]
-        new_dir: String,
+        new_dir: PathBuf,
     },
     #[clap(about = "Delete a directory")]
     DeleteDirectory {
         #[clap(value_parser)]
-        directory_name: String,
+        directory_name: PathBuf,
     },
     #[clap(about = "List files in a directory")]
     ListFiles {
         #[clap(short, long, value_parser)]
-        directory: Option<String>,
+        directory: Option<PathBuf>,
     },
     #[clap(about = "List sub-directories of a directory")]
     ListDirectories {
         #[clap(short, long, value_parser)]
-        directory: Option<String>,
+        directory: Option<PathBuf>,
     },
 }
+
 fn main() -> io::Result<()> {
     let cli = Cli::parse();
-    match cli.command {
+    
+    let result = match cli.command {
         Command::Rename { old_name, new_name } => {
-            rn_file(old_name, new_name)?;
+            rn_file(old_name, new_name).map(|_| println!("File renamed successfully."))
         }
-        Command::Create {
-            ref file_name,
-            ref directory,
-        } => {
-            let file_path = PathBuf::from(&file_name);
-            let directory = directory.clone();
-            if directory.is_none() {
-                fs::File::create(file_path)?;
-            } else if directory.is_some() {
-                let dir_path = PathBuf::from(directory.unwrap()).join(file_name);
-                fs::File::create(dir_path)?;
-            }
-            println!("File created successfully.");
+        Command::Create { file_name, directory } => {
+            create_file(file_name, directory).map(|_| println!("File created successfully."))
         }
-        Command::Delete {
-            ref file_path,
-            ref directory,
-        } => {
-            if let Err(e) = del_file(file_path.to_path_buf(), directory.clone().unwrap()) {
-                match e.kind() {
-                    std::io::ErrorKind::Other => {
-                        println!("Error: {}", e);
-                    }
-                    _ => panic!("Unknown Error"),
-                }
-            } else {
-                return Ok(());
-            }
+        Command::Delete { file_path, directory } => {
+            del_file(file_path, directory).map(|_| println!("Deleted successfully."))
         }
-        Command::Move {
-            ref source_directory,
-            ref destination_directory,
-        } => {
-            if let Err(e) = mv_file(
-                source_directory.to_path_buf(),
-                destination_directory.to_path_buf(),
-            ) {
-                match e.kind() {
-                    std::io::ErrorKind::Other => {
-                        println!("Error: {}", e);
-                    }
-                    _ => panic!("Unknown Error"),
-                }
-            } else {
-                return Ok(());
-            }
+        Command::Move { source_directory, destination_directory } => {
+            mv_file(source_directory, destination_directory).map(|_| println!("Moved successfully."))
         }
-        Command::Copy {
-            ref source_path,
-            ref destination_path,
-            ref file_name,
-        } => {
-            if let Err(e) = cpy_file(
-                source_path.to_owned(),
-                destination_path.to_owned(),
-                file_name,
-            ) {
-                match e.kind() {
-                    std::io::ErrorKind::Other => {
-                        println!("Error: {}", e);
-                    }
-                    _ => {
-                        println!("Unknown Error");
-                    }
-                }
-            } else {
-                return Ok(());
-            }
+        Command::Copy { source_path, destination_path, file_name } => {
+            cpy_file(source_path, destination_path, &file_name).map(|_| println!("Copied successfully."))
         }
-        Command::Properties { ref file_name } => {
-            file_prop(file_name.to_owned())?;
+        Command::Properties { file_name } => {
+            file_prop(file_name)
         }
         Command::CreateDirectory { directory_name, parent_directory } => {
-            if let Err(e) = create_dir(directory_name, parent_directory) {
-                match e.kind() {
-                    std::io::ErrorKind::Other => {
-                        println!("Error: {}", e);
-                    }
-                    _ => {
-                        println!("Unknown Error");
-                    }
-                }
-            } else {
-                return Ok(());
-            }
+            create_dir(directory_name, parent_directory).map(|_| println!("Directory created successfully."))
         }
-        _ => println!("Not done yet"),
+        Command::RenameDirectory { old_dir, new_dir } => {
+            rn_file(old_dir, new_dir).map(|_| println!("Directory renamed successfully."))
+        }
+        Command::DeleteDirectory { directory_name } => {
+            del_file(directory_name, None).map(|_| println!("Directory deleted successfully."))
+        }
+        _ => {
+            println!("Command not yet implemented.");
+            Ok(())
+        }
+    };
+
+    if let Err(e) = result {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
     }
 
-    // dbg!(&cli);
     Ok(())
 }

@@ -1,18 +1,18 @@
 use std::path::PathBuf;
 use std::fs::DirBuilder;
+use std::io;
 
-pub fn create_dir(dir_name: PathBuf, parent_dir: Option<PathBuf>) -> Result<(), std::io::Error>  {
-  let mut builder = DirBuilder::new();
-  if parent_dir.is_none() {
-    let cwd = std::env::current_dir().unwrap();
-    let path = cwd.join(&dir_name);
-    builder.recursive(false).create(path).unwrap();
+pub fn create_dir(dir_name: PathBuf, parent_dir: Option<PathBuf>) -> io::Result<()>  {
+    let mut builder = DirBuilder::new();
+    builder.recursive(true); // Usually better to be recursive if we are specifying a path
 
-  }
+    let target_path = if let Some(parent) = parent_dir {
+        parent.join(dir_name)
+    } else {
+        dir_name
+    };
 
-  let target_path = parent_dir.unwrap().join(dir_name);
+    builder.create(target_path)?;
 
-  builder.recursive(false).create(target_path).unwrap();
-
-  Ok(())
+    Ok(())
 }

@@ -1,121 +1,56 @@
-# File Management CLI App
+# File Management CLI
 
-A file management CLI app built using Rust, with the following functionality:
+A robust, cross-platform file management utility built in Rust using `clap` (v4).
 
-* Copying files
-* Deleting files
-* Moving files
-* Renaming files
-* Listing the properties of a file
+## Features
 
-## Getting Started
+- **Rename**: Safely rename files and directories.
+- **Create**: Create new files, optionally within a specified directory.
+- **Delete**: Recursively delete files or directories.
+- **Move**: Move files with automatic fallback for cross-device operations.
+- **Copy**: Copy files directly or search for a specific file within a source directory.
+- **Properties**: View detailed metadata, including file format, kind, and size.
+- **CreateDirectory**: Create new directories (supports recursive creation).
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+## Installation
 
-### Prerequisites
+1. Ensure you have [Rust](https://rustup.rs/) installed.
+2. Clone the repository and build:
+   ```bash
+   cargo build --release
+   ```
+3. Use the binary:
+   ```bash
+   ./target/release/filemanager --help
+   ```
 
-* Rust (>= 1.45)
-* Cargo (Rust package manager)
+## Usage
 
-### Installing
+### Examples
 
-1. Clone the repository:
-```
-git clone https://github.com/[username]/file-management-cli.git
-```
-2. Change to the project directory:
-```
-cd file-management-cli
-```
-3. Build the project:
-```
-cargo build --release
-```
-4. Run the project:
-```
-./target/release/file_management_cli
-```
+- **Copy a file**:
+  ```bash
+  filemanager copy --source-path ./src --destination-path ./backup --file-name main.rs
+  ```
+- **Create a directory**:
+  ```bash
+  filemanager create-directory my_new_folder
+  ```
+- **View file properties**:
+  ```bash
+  filemanager properties README.md
+  ```
+- **Rename a file**:
+  ```bash
+  filemanager rename old.txt new.txt
+  ```
 
-## Using the App
+## Development
 
-### Commands
+This project emphasizes robust error handling, eliminating panics, and providing clear CLI feedback. It leverages:
+- `clap`: For powerful command-line argument parsing.
+- `walkdir`: For efficient directory traversal.
+- `file-format`: For accurate file type identification.
 
-#### Copying Files
-
-```
-file_management_cli copy <SOURCE_PATH> <DESTINATION_PATH> [FILE_NAME]
-```
-
-#### Deleting Files
-
-```
-file_management_cli delete <FILE_PATH>
-```
-
-#### Moving Files
-
-```
-file_management_cli move <SOURCE_PATH> <DESTINATION_PATH>
-```
-
-#### Renaming Files
-
-```
-file_management_cli rename <OLD_NAME> <NEW_NAME>
-```
-
-#### Listing File Properties
-
-```
-file_management_cli properties <FILE>
-```
-
-### Options
-
-* `-h`, `--help`: Print help information
-* `-V`, `--version`: Print version information
-
-## Roadmap
-
-* Creating directories
-* Deleting directories
-* Listing files in a directory
-* Listing sub-directories of a directory
-
-### Creating Directories
-
-* Implement a command for creating directories
-* Allow creating multiple directories at once
-* Validate directory creation
-
-### Deleting Directories
-
-* Implement a command for deleting directories
-* Allow deleting multiple directories at once
-* Validate directory deletion
-
-### Listing Files in a Directory
-
-* Implement a command for listing files in a directory
-* Allow listing files recursively
-* Allow filtering by file type
-
-### Listing Sub-Directories of a Directory
-
-* Implement a command for listing sub-directories of a directory
-* Allow listing sub-directories recursively
-* Allow filtering by directory depth
-
-## Built With
-
-* [clap](https://github.com/clap-rs/clap) - Command Line Argument Parser.
-* [walkdir](https://github.com/BurntSushi/walkdir) - File tree traversal.
-* [file-format](https://github.com/servo/file-format) - File format parsing.
-
-## Acknowledgments
-
-* Hat tip to the creators of Clap, Walkdir, and File-format.
-
-## Disclaimer
-
-This README is for educational purposes only. The author is not responsible for any misuse of the information contained in this README.
+## License
+MIT

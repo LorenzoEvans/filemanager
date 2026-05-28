@@ -1,62 +1,59 @@
-use std::io::prelude::*;
-use std::io::{Error, ErrorKind};
+use std::io;
 use std::path::PathBuf;
-use std::{fs, fs::File};
+use std::fs;
 use walkdir::WalkDir;
 
 pub fn cpy_file(
-    src_dir: PathBuf,
-    mut target_dir: PathBuf,
-    src_file_name: &Option<PathBuf>,
-) -> Result<(), Error> {
-    let mut buf = Vec::new();
-    if src_dir.is_file() {
-        //  Open the file to be copied
-        let mut src_file = File::open(&src_dir)?;
-        // Make buffer to store contents
-        // Read data into buffer
-        src_file.read_to_end(&mut buf)?;
-        let f_name = if src_file_name.is_none() {
-            src_dir.file_name().unwrap().to_str().unwrap().to_string()
+    source_path: PathBuf,
+    destination_path: PathBuf,
+    file_name_to_search: &Option<PathBuf>,
+) -> io::Result<()> {
+    let source_file = if source_path.is_file() {
+        source_path
+    } else if source_path.is_dir() {
+        if let Some(name) = file_name_to_search {
+            find_file_in_dir(&source_path, name)?
         } else {
-            src_file_name.clone().unwrap().to_str().unwrap().to_string()
-        };
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "file_name is required when source_path is a directory",
+            ));
+        }
+    } else {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Source path not found: {:?}", source_path),
+        ));
+    };
 
-        let mut target_path = target_dir.parent().unwrap().to_owned();
-        target_path.push(f_name);
-        // Write contents of buffer to target path
-        fs::write(target_path, &buf)?;
-    }
-    if src_dir.is_dir() && src_file_name.is_none() {
-        let err = Error::new(ErrorKind::Other, "`file_name` is required when `source-path` is a directory, in order to search the directory for the file.");
-        eprintln!("Unable to complete copy operation: {err}");
-        std::process::exit(1);
-    }
+    let destination = if destination_path.is_dir() {
+        let name = source_file.file_name().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "Invalid source file name")
+        })?;
+        destination_path.join(name)
+    } else {
+        destination_path
+    };
 
-    let src_name = src_file_name.clone().unwrap();
+    // Use standard fs::copy for efficiency
+    fs::copy(&source_file, &destination)?;
 
-    let mut walk_dir = WalkDir::new(&src_dir).into_iter();
+    Ok(())
+}
 
-    let mut exists_in_dir = false;
-
-    let mut full_path = PathBuf::new();
-    buf.flush()?;
-
-    while !exists_in_dir {
-        let dir_entry = walk_dir.next().unwrap()?.path().to_owned();
-
-        if dir_entry == src_name {
-            println!("File match {:?} : {:?}", dir_entry, src_name);
-            full_path = dir_entry;
-            exists_in_dir = true;
+fn find_file_in_dir(dir: &PathBuf, target_name: &PathBuf) -> io::Result<PathBuf> {
+    for entry in WalkDir::new(dir).into_iter() {
+        let entry = entry.map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        if entry.file_type().is_file() {
+            if let Some(name) = entry.path().file_name() {
+                if name == target_name {
+                    return Ok(entry.path().to_path_buf());
+                }
+            }
         }
     }
-
-    let mut cpy_file = File::open(&full_path)?;
-    let file_name = full_path.file_name().unwrap();
-    cpy_file.read_to_end(&mut buf)?;
-    target_dir.push(file_name);
-
-    fs::write(target_dir, buf)?;
-    Ok(())
+    Err(io::Error::new(
+        io::ErrorKind::NotFound,
+        format!("File {:?} not found in directory {:?}", target_name, dir),
+    ))
 }
